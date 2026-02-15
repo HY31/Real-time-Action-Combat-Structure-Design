@@ -1,2 +1,2 @@
-# Unity_QuarterView-RPG-Combat
-A project focused on combat systems and data-structure-driven design.
+# Real-time Action Combat Structure Design
+A project focused on Real-time action combat systems and data-structure-driven design.
