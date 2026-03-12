@@ -1,57 +1,67 @@
+using System;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 public class PlayerController : MonoBehaviour
 {
     private CharacterController controller;
+    public CharacterController Controller => controller;
+
     [Header("Move")]
     private float moveSpeed = 6f;
-    private Vector2 moveInput;
-
-    [Header("State")]
-    public bool isAttacking;
-    public bool isDodging;
-
-    [Header("Attack Combo")]
-    private int attackCount = 0;
-    private float comboTimer;
-    public float comboResetTime = 1f;
+    public Vector2 MoveInput { get; private set; }
+    public float MoveSpeed => moveSpeed;
 
     [Header("Gravity")]
     private float yVelocity;
+    public float YVelocity => yVelocity;
+
     public float gravity = -9.81f;
     public float groundedGravity = -2f;
+
+    [Header("State")]
+    private IPlayerState currentState;
+    
+    // 상태 인스턴스 캐싱
+    public IdleState IdleState { get; private set; }
+    public AttackState AttackState { get; private set; }
+    public DodgeState DodgeState { get; private set; }
+    public HitState HitState { get; private set; }
+
+    [Header("Attack Combo")]
+    public AttackData[] normalCombo;
+
+    [Header("Dodge")]
+    private float dodgeSpeed = 2f;
+    public float DodgeSpeed => dodgeSpeed;
+
+    [Header("Animate")]
+    public Animator Animator { get; private set; }
+    
 
     private void Awake()
     {
         controller = GetComponent<CharacterController>();
+        Animator = GetComponent<Animator>();
+
+        IdleState = new IdleState(this);
+        AttackState = new AttackState(this);
+        DodgeState = new DodgeState(this);
+        HitState = new HitState(this);
     }
 
     void Start()
     {
-        
+        ChangeState(IdleState);
     }
 
     void Update()
     {
-        HandleMove();
-        HandleComboTimer();
+        currentState?.Update();
     }
 
-    #region Movement
-
-    void HandleMove()
-    {
-        if (isAttacking || isDodging) return;
-
-        Vector3 move = new Vector3(moveInput.x, 0, moveInput.y);
-
-        HandleGravity();
-        move.y = yVelocity;
-
-        controller.Move(move * moveSpeed * Time.deltaTime);
-    }
-    void HandleGravity()
+    public void HandleGravity()
     {
         if (controller.isGrounded)
         {
@@ -64,68 +74,48 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    #endregion
+    public void ChangeState(IPlayerState newState)
+    {
+        if (currentState == newState) return;
 
+        currentState?.Exit();
+        currentState = newState;
+        Debug.Log($"Current state = {currentState}");
+        currentState.Enter();
+    }
     #region Input
     public void OnMove(InputValue value)
     {
-        moveInput = value.Get<Vector2>();
+        MoveInput = value.Get<Vector2>();
     }
 
     public void OnAttack(InputValue value) // 임시
     {
-        if (isDodging) return;
-
-        if (!isAttacking)
+        if(value.isPressed)
         {
-            isAttacking = true;
-            attackCount = 1;
-            Debug.Log("1타");
-            Invoke(nameof(EndAttack), 0.5f);
+            currentState?.HandleAttack();
         }
-        else
-        {
-            if (comboTimer > 0)
-            {
-                attackCount++;
-                Debug.Log(attackCount + "타");
-                if (attackCount > 3) return;
-            }
-        }
-
-        comboTimer = comboResetTime;
-    }
-    void HandleComboTimer()
-    {
-        if (comboTimer > 0)
-        {
-            comboTimer -= Time.deltaTime;
-        }
-        else
-        {
-            attackCount = 0;
-        }
-    }
-
-    void EndAttack()
-    {
-        isAttacking = false;
     }
 
     public void OnDodge(InputValue value) // 임시
     {
-        if (isAttacking) return;
-        if (isDodging) return;
-
-        isDodging = true;
-        Debug.Log("회피!");
-
-        Invoke(nameof(EndDodge), 0.3f); 
+        if (value.isPressed)
+        {
+            currentState?.HandleDodge();
+        }
     }
 
-    void EndDodge()
+    public void OnHitTest(InputValue value)
     {
-        isDodging = false;
+        if (value.isPressed)
+        {
+            currentState?.HandleHit();
+        }
+    }
+
+    void TakeHit()
+    {
+        ChangeState(HitState);
     }
     #endregion
 }
