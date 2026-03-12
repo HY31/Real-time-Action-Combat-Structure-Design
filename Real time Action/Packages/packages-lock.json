@@ -204,6 +204,15 @@
       },
       "url": "https://packages.unity.com"
     },
+    "com.zigurous.animation": {
+      "version": "https://github.com/zigurous/unity-animation-library.git",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {
+        "com.unity.inputsystem": "1.2.0"
+      },
+      "hash": "3b47bbeebff655dd4af0d6a524e15cb52849be55"
+    },
     "com.unity.modules.accessibility": {
       "version": "1.0.0",
       "depth": 0,
